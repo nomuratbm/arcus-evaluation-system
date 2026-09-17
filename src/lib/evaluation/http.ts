@@ -37,7 +37,10 @@ export function filingErrorResponse(
 ): Response {
   if (result.status === "misconfigured") {
     return Response.json(
-      { error: "Server configuration error: missing S3 bucket" },
+      {
+        error:
+          "Server configuration error: missing S3 bucket or DynamoDB table",
+      },
       { status: 500 },
     );
   }

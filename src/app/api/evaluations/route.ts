@@ -24,6 +24,7 @@ export async function POST(request: Request) {
 
     return Response.json({
       stored: true,
+      evaluationId: result.evaluationId,
       key: result.key,
       bucket: result.bucket,
     });

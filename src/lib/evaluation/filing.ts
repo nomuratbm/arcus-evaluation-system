@@ -4,6 +4,8 @@ import {
   validateEvaluationDraft,
   type ValidationResult,
 } from "@/lib/evaluation/validate";
+import type { EvaluationIndex } from "@/lib/evaluation/catalog-types";
+import { createEvaluationId, dynamoEvaluationIndex } from "@/lib/dynamodb/evaluations";
 import { putEvaluationPdf, s3BucketName } from "@/lib/s3/evaluations";
 import type { StudentIdentity, StudentLookupResult } from "@/lib/student-identity";
 import { lookupStudent } from "@/lib/student-lookup";
@@ -21,6 +23,7 @@ export type StudentLookup = (studentId: string) => Promise<StudentLookupResult>;
 export type EvaluationFilingPorts = {
   lookup: StudentLookup;
   store: EvaluationPdfStore;
+  index: EvaluationIndex;
 };
 
 export type AssembledEvaluation = {
@@ -42,7 +45,7 @@ export type FileEvaluationResult =
   | { status: "invalid"; errors: ValidationResult["errors"] }
   | { status: "not_registered" }
   | { status: "misconfigured" }
-  | { status: "stored"; key: string; bucket: string };
+  | { status: "stored"; evaluationId: string; key: string; bucket: string };
 
 const s3Store: EvaluationPdfStore = {
   isConfigured() {
@@ -54,11 +57,12 @@ const s3Store: EvaluationPdfStore = {
 const productionPorts: EvaluationFilingPorts = {
   lookup: lookupStudent,
   store: s3Store,
+  index: dynamoEvaluationIndex,
 };
 
 /**
  * Validate, re-lookup the registered student, and fill FM-SA-05-01.
- * Never writes to object storage.
+ * Never writes to object storage or the evaluation index.
  */
 export async function assembleEvaluation(
   draft: EvaluationDraft,
@@ -98,7 +102,7 @@ export async function previewEvaluation(
   return { status: "ready", pdf: assembled.assembled.pdf };
 }
 
-/** Assemble then persist. The only write path. */
+/** Assemble then persist PDF + DynamoDB index. The only write path. */
 export async function fileEvaluation(
   draft: EvaluationDraft,
   claimedIdentity: StudentIdentity,
@@ -109,7 +113,7 @@ export async function fileEvaluation(
     return { status: "invalid", errors: claimedValidation.errors };
   }
 
-  if (!ports.store.isConfigured()) {
+  if (!ports.store.isConfigured() || !ports.index.isConfigured()) {
     return { status: "misconfigured" };
   }
 
@@ -123,5 +127,29 @@ export async function fileEvaluation(
     body: assembled.assembled.pdf,
   });
 
-  return { status: "stored", key: stored.key, bucket: stored.bucket };
+  const evaluationId = createEvaluationId();
+  const filedAt = new Date().toISOString();
+  const identity = assembled.assembled.identity;
+
+  await ports.index.put({
+    evaluationId,
+    studentId: identity.studentId,
+    fullName: identity.fullName,
+    programYear: identity.programYear,
+    organizationName: identity.organizationName,
+    department: draft.department,
+    recentActivity: draft.recentActivity,
+    dateParticipated: draft.dateParticipated,
+    participated: draft.participated === "yes" ? "yes" : "no",
+    s3Bucket: stored.bucket,
+    s3Key: stored.key,
+    filedAt,
+  });
+
+  return {
+    status: "stored",
+    evaluationId,
+    key: stored.key,
+    bucket: stored.bucket,
+  };
 }

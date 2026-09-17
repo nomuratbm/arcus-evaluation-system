@@ -1,6 +1,8 @@
 "use client";
 
+import { useSearchParams } from "next/navigation";
 import {
+  useEffect,
   useRef,
   useState,
   useTransition,
@@ -83,9 +85,11 @@ function IdentityValue({
 }
 
 export function IdentitySection({ errors }: IdentitySectionProps) {
+  const searchParams = useSearchParams();
   const [isPending, startTransition] = useTransition();
   const [lookupStatus, setLookupStatus] = useState<LookupStatus>("idle");
   const abortRef = useRef<AbortController | null>(null);
+  const appliedQueryRef = useRef(false);
 
   const studentId = useEvaluationStore((state) => state.draft.studentId);
   const department = useEvaluationStore((state) => state.draft.department);
@@ -95,6 +99,18 @@ export function IdentitySection({ errors }: IdentitySectionProps) {
   const setIdentity = useEvaluationStore((state) => state.setIdentity);
 
   const resolved = isMatchingIdentity(identity, studentId);
+
+  useEffect(() => {
+    if (appliedQueryRef.current) {
+      return;
+    }
+    const fromQuery = searchParams.get("studentId");
+    if (!fromQuery?.trim()) {
+      return;
+    }
+    appliedQueryRef.current = true;
+    setStudentId(fromQuery.trim());
+  }, [searchParams, setStudentId]);
 
   function lookupCurrentNumber() {
     const parsed = parseStudentNumber(studentId);

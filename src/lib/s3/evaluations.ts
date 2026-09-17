@@ -1,4 +1,8 @@
-import { PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
+import {
+  GetObjectCommand,
+  PutObjectCommand,
+  S3Client,
+} from "@aws-sdk/client-s3";
 
 import { readEnv } from "@/lib/dynamodb/env";
 
@@ -39,4 +43,22 @@ export async function putEvaluationPdf(input: {
   );
 
   return { bucket, key };
+}
+
+export async function getEvaluationPdf(input: {
+  bucket: string;
+  key: string;
+}): Promise<Uint8Array> {
+  const result = await s3().send(
+    new GetObjectCommand({
+      Bucket: input.bucket,
+      Key: input.key,
+    }),
+  );
+
+  if (!result.Body) {
+    throw new Error("Evaluation PDF object was empty");
+  }
+
+  return new Uint8Array(await result.Body.transformToByteArray());
 }
