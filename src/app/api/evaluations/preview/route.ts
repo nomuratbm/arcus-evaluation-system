@@ -1,6 +1,7 @@
-import { fileEvaluation } from "@/lib/evaluation/filing";
+import { previewEvaluation } from "@/lib/evaluation/filing";
 import {
   filingErrorResponse,
+  filledPdfResponse,
   readEvaluationSubmission,
 } from "@/lib/evaluation/http";
 
@@ -13,24 +14,20 @@ export async function POST(request: Request) {
   }
 
   try {
-    const result = await fileEvaluation(
+    const result = await previewEvaluation(
       parsed.submission.draft,
       parsed.submission.identity,
     );
 
-    if (result.status !== "stored") {
+    if (result.status !== "ready") {
       return filingErrorResponse(result);
     }
 
-    return Response.json({
-      stored: true,
-      key: result.key,
-      bucket: result.bucket,
-    });
+    return filledPdfResponse(result.pdf);
   } catch (error) {
-    console.error("Error submitting evaluation:", error);
+    console.error("Error previewing evaluation:", error);
     return Response.json(
-      { error: "Failed to store the evaluation PDF" },
+      { error: "Failed to preview the evaluation PDF" },
       { status: 500 },
     );
   }

@@ -215,12 +215,17 @@ function toPdfText(value: string): string {
     .replaceAll(/[^\x09\x0A\x0D\x20-\x7E]/g, "");
 }
 
+/** Template DA is `/Helv 0 Tf` (auto-size). In the tall comments widget that enlarges short text. */
+const TEXT_FONT_SIZE = 9;
+
 function setText(form: PDFForm, name: string, value: string) {
   const trimmed = value.trim();
   if (!trimmed) {
     return;
   }
-  form.getTextField(name).setText(toPdfText(trimmed));
+  const field = form.getTextField(name);
+  field.setFontSize(TEXT_FONT_SIZE);
+  field.setText(toPdfText(trimmed));
 }
 
 function setChecked(form: PDFForm, name: string, checked: boolean) {
