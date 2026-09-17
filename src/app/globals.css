@@ -242,3 +242,8 @@
     @apply font-sans font-sans font-mono;
   }
 }
+
+.rating-row {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 7.5rem;
+}
