@@ -1,10 +1,10 @@
-import { authErrorResponse, requireOfficer } from "@/lib/auth/session";
+import { authErrorResponse, requireAdmin } from "@/lib/auth/session";
 import { listFiledEvaluations } from "@/lib/evaluation/catalog";
 
 export const dynamic = "force-dynamic";
 
 export async function GET(request: Request) {
-  const auth = await requireOfficer();
+  const auth = await requireAdmin();
   if (!auth.ok) {
     return authErrorResponse(auth.error);
   }

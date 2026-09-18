@@ -2,18 +2,18 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import type { ReactNode } from "react";
 
-import { requireOfficer } from "@/lib/auth/session";
+import { requireAdmin } from "@/lib/auth/session";
 
 export default async function OfficerLayout({
   children,
 }: {
   children: ReactNode;
 }) {
-  const auth = await requireOfficer();
+  const auth = await requireAdmin();
   if (!auth.ok) {
     redirect(
       auth.error.status === "unauthenticated"
-        ? "/?auth=required"
+        ? "/api/auth/login"
         : "/?auth=forbidden",
     );
   }

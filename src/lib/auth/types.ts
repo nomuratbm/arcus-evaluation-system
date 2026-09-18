@@ -1,14 +1,15 @@
-export type AppRole = "student" | "officer";
+export type AppRole = "admin";
 
 export type AppSession = {
   userId: string;
   role: AppRole;
   displayName: string;
+  email?: string;
 };
 
 /**
  * Auth adapter at the session seam.
- * Cognito will replace the current stub without changing callers.
+ * Cognito replaces the stub without changing callers.
  */
 export type AuthAdapter = {
   getSession(): Promise<AppSession | null>;
@@ -16,4 +17,4 @@ export type AuthAdapter = {
 
 export type AuthError =
   | { status: "unauthenticated" }
-  | { status: "forbidden"; role: AppRole };
+  | { status: "forbidden"; role: string };

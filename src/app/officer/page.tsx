@@ -11,7 +11,7 @@ import {
   CardPanel,
   CardTitle,
 } from "@/components/ui/card";
-import { requireOfficer } from "@/lib/auth/session";
+import { requireAdmin } from "@/lib/auth/session";
 import { getOfficerDashboard } from "@/lib/evaluation/catalog";
 
 export const metadata = {
@@ -33,7 +33,7 @@ function formatFiledAt(iso: string): string {
 }
 
 export default async function OfficerDashboardPage() {
-  const auth = await requireOfficer();
+  const auth = await requireAdmin();
   if (!auth.ok) {
     redirect("/");
   }

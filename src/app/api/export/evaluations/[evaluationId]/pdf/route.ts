@@ -1,4 +1,4 @@
-import { authErrorResponse, requireOfficer } from "@/lib/auth/session";
+import { authErrorResponse, requireAdmin } from "@/lib/auth/session";
 import { downloadFiledEvaluation } from "@/lib/evaluation/catalog";
 
 export const dynamic = "force-dynamic";
@@ -8,7 +8,7 @@ type RouteContext = {
 };
 
 export async function GET(_request: Request, context: RouteContext) {
-  const auth = await requireOfficer();
+  const auth = await requireAdmin();
   if (!auth.ok) {
     return authErrorResponse(auth.error);
   }
