@@ -129,8 +129,10 @@ export async function GET(request: Request) {
 
   // Check admin group membership
   const adminGroup = readEnv("COGNITO_ADMIN_GROUP") || "admin";
+  const orgSubmitterGroup =
+    readEnv("COGNITO_ORG_SUBMITTER_GROUP") || "org_submitter";
   const groups: string[] = payload["cognito:groups"] ?? [];
-  if (!groups.includes(adminGroup)) {
+  if (!groups.includes(adminGroup) && !groups.includes(orgSubmitterGroup)) {
     return Response.redirect(new URL("/?auth=forbidden", url.origin), 302);
   }
 

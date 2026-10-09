@@ -21,6 +21,7 @@ export const stubAuthAdapter: AuthAdapter = {
       role: "admin",
       displayName: "Dev Admin",
       email: "dev@localhost",
+      organizationId: readEnv("AUTH_DEV_ORGANIZATION_ID"),
     };
   },
 };

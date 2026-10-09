@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import { OfficerQuickActions } from "@/components/officer/OfficerQuickActions";
+import { OpenEvaluations } from "@/components/officer/OpenEvaluations";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -11,6 +12,10 @@ import {
   CardPanel,
   CardTitle,
 } from "@/components/ui/card";
+import {
+  fetchPublishedEvents,
+  type ApexPublishedEvent,
+} from "@/lib/apex/client";
 import { requireAdmin } from "@/lib/auth/session";
 import { getOfficerDashboard } from "@/lib/evaluation/catalog";
 
@@ -40,54 +45,23 @@ export default async function OfficerDashboardPage() {
 
   const status = await getOfficerDashboard();
 
+  let openEvents: ApexPublishedEvent[] = [];
+  let eventsError: string | null = null;
+  try {
+    openEvents = await fetchPublishedEvents({
+      organizationId: auth.session.organizationId,
+      window: "evaluation",
+    });
+  } catch (error) {
+    eventsError =
+      error instanceof Error
+        ? error.message
+        : "Could not load events from mapua-apex.";
+  }
+
   return (
     <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
-      <div className="flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-foreground">
-            Officer dashboard
-          </h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Filing status and quick access for OSA officers.
-          </p>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <Badge variant={status.indexConfigured ? "success" : "warning"}>
-            DynamoDB {status.indexConfigured ? "ready" : "not configured"}
-          </Badge>
-          <Badge variant={status.storageConfigured ? "success" : "warning"}>
-            S3 {status.storageConfigured ? "ready" : "not configured"}
-          </Badge>
-        </div>
-      </div>
-
-      <div className="mt-8 grid gap-4 sm:grid-cols-3">
-        <Card>
-          <CardHeader>
-            <CardDescription>Filed today</CardDescription>
-            <CardTitle className="text-3xl tabular-nums">
-              {status.filedToday}
-            </CardTitle>
-          </CardHeader>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardDescription>This week</CardDescription>
-            <CardTitle className="text-3xl tabular-nums">
-              {status.filedThisWeek}
-            </CardTitle>
-          </CardHeader>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardDescription>Listed in index</CardDescription>
-            <CardTitle className="text-3xl tabular-nums">
-              {status.totalFiled}
-            </CardTitle>
-          </CardHeader>
-        </Card>
-      </div>
-
+      // ... existing code ...
       <section className="mt-8">
         <h2 className="text-base font-semibold text-foreground">
           Quick access
@@ -99,6 +73,8 @@ export default async function OfficerDashboardPage() {
           <OfficerQuickActions />
         </div>
       </section>
+
+      <OpenEvaluations events={openEvents} error={eventsError} />
 
       <section className="mt-10">
         <div className="flex items-center justify-between gap-3">

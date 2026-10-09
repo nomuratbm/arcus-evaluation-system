@@ -26,10 +26,20 @@ export const cognitoAuthAdapter: AuthAdapter = {
     }
 
     const adminGroup = readEnv("COGNITO_ADMIN_GROUP") || "admin";
+    const orgSubmitterGroup =
+      readEnv("COGNITO_ORG_SUBMITTER_GROUP") || "org_submitter";
     const groups: string[] = payload["cognito:groups"] ?? [];
-    if (!groups.includes(adminGroup)) {
+    // Evaluation has a single authenticated tier: org_submitters operate it
+    // with the same access as admins, so both map to role "admin".
+    if (!groups.includes(adminGroup) && !groups.includes(orgSubmitterGroup)) {
       return null;
     }
+
+    const rawOrganizationId = payload["custom:organization_id"];
+    const organizationId =
+      typeof rawOrganizationId === "string" && rawOrganizationId.trim()
+        ? rawOrganizationId.trim()
+        : undefined;
 
     return {
       userId: payload.sub,
@@ -37,6 +47,7 @@ export const cognitoAuthAdapter: AuthAdapter = {
       displayName:
         payload["cognito:username"] ?? payload.email ?? payload.sub,
       email: payload.email,
+      organizationId,
     };
   },
 };

@@ -5,6 +5,12 @@ export type AppSession = {
   role: AppRole;
   displayName: string;
   email?: string;
+  /**
+   * mapua-apex organization scope from the Cognito `custom:organization_id`
+   * claim. Present for org_submitters; absent for admins (who may act across
+   * every org). Used to scope server-to-server calls to the backend.
+   */
+  organizationId?: string;
 };
 
 /**
