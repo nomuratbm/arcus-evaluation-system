@@ -259,7 +259,10 @@ export function IdentitySection({ errors }: IdentitySectionProps) {
           Department
         </label>
         <Select
-          items={[...DEPARTMENT_VALUES]}
+          items={DEPARTMENT_VALUES.map((dept) => ({
+            label: dept,
+            value: dept,
+          }))}
           value={department || null}
           onValueChange={(value) =>
             setDepartment(typeof value === "string" ? value : "")
