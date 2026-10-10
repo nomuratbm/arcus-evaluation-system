@@ -234,6 +234,7 @@ export function EvaluationForm() {
           errors={{
             participated: errors.participated,
             recentActivity: errors.recentActivity,
+            dateParticipated: errors.dateParticipated,
           }}
         />
 
@@ -246,7 +247,7 @@ export function EvaluationForm() {
               }}
             />
             <RatingsSection error={errors.ratings} />
-            <CommentsSection />
+            <CommentsSection error={errors.comments} />
           </>
         ) : null}
 

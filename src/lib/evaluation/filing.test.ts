@@ -22,7 +22,7 @@ function validDraft(overrides: Partial<EvaluationDraft> = {}): EvaluationDraft {
   return {
     ...createEmptyDraft(),
     studentId: ana.studentId,
-    department: "Computer Engineering",
+    department: "School of Information Technology",
     participated: "no",
     ...overrides,
   };

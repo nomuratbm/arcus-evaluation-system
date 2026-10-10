@@ -9,6 +9,8 @@ type FieldProps = {
   autoComplete?: string;
   placeholder?: string;
   maxLength?: number;
+  type?: string;
+  inputMode?: "text" | "numeric" | "tel" | "email" | "decimal" | "search" | "url" | "none";
   onBlur?: () => void;
   onKeyDown?: (event: KeyboardEvent<HTMLInputElement>) => void;
 };
@@ -22,6 +24,8 @@ export function TextField({
   autoComplete,
   placeholder,
   maxLength,
+  type = "text",
+  inputMode,
   onBlur,
   onKeyDown,
 }: FieldProps) {
@@ -32,7 +36,8 @@ export function TextField({
       </label>
       <input
         id={id}
-        type="text"
+        type={type}
+        inputMode={inputMode}
         value={value}
         autoComplete={autoComplete}
         placeholder={placeholder}

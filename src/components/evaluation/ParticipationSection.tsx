@@ -1,10 +1,13 @@
 "use client";
 
 import { TextField } from "@/components/evaluation/TextField";
+import { FIELD_LIMITS } from "@/lib/evaluation/validate";
 import { useEvaluationStore } from "@/store/useEvaluationStore";
 
 type ParticipationSectionProps = {
-  errors: Partial<Record<"participated" | "recentActivity", string>>;
+  errors: Partial<
+    Record<"participated" | "recentActivity" | "dateParticipated", string>
+  >;
 };
 
 export function ParticipationSection({ errors }: ParticipationSectionProps) {
@@ -66,12 +69,13 @@ export function ParticipationSection({ errors }: ParticipationSectionProps) {
         ) : null}
       </fieldset>
 
-      {showActivityFields ? (
+       {showActivityFields ? (
         <div className="grid gap-4 sm:grid-cols-2">
           <TextField
             id="eval-recent-activity"
             label="What activity or program did you participate in recently?"
             value={recentActivity}
+            maxLength={FIELD_LIMITS.recentActivity.max}
             error={errors.recentActivity}
             onChange={setRecentActivity}
           />
@@ -79,6 +83,8 @@ export function ParticipationSection({ errors }: ParticipationSectionProps) {
             id="eval-date-participated"
             label="Date participated (if applicable)"
             value={dateParticipated}
+            type="date"
+            error={errors.dateParticipated}
             placeholder="e.g. 2026-03-15"
             onChange={setDateParticipated}
           />

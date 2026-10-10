@@ -1,6 +1,7 @@
 "use client";
 
 import { DISCOVERY_SOURCES } from "@/lib/evaluation/criteria";
+import { FIELD_LIMITS } from "@/lib/evaluation/validate";
 import { useEvaluationStore } from "@/store/useEvaluationStore";
 
 type DiscoverySectionProps = {
@@ -58,6 +59,7 @@ export function DiscoverySection({ errors }: DiscoverySectionProps) {
             id="eval-others-specify"
             type="text"
             value={othersSpecify}
+            maxLength={FIELD_LIMITS.othersSpecify.max}
             onChange={(event) => setOthersSpecify(event.target.value)}
             aria-invalid={errors.othersSpecify ? true : undefined}
             className="h-10 rounded-md border border-stone-300 bg-white px-3 text-sm text-stone-900 outline-none transition focus:border-sky-700 focus:ring-2 focus:ring-sky-700/20"
