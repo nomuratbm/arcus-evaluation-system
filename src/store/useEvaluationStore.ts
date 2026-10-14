@@ -24,6 +24,7 @@ type EvaluationStore = {
   setOthersSpecify: (value: string) => void;
   setRating: (criterionId: CriterionId, value: RatingValue) => void;
   setComments: (value: string) => void;
+  setEvent: (eventId: string, eventTitle: string) => void;
   reset: () => void;
 };
 
@@ -120,7 +121,20 @@ export const useEvaluationStore = create<EvaluationStore>()(
           draft: { ...state.draft, comments: value },
         })),
 
-      reset: () => set({ draft: createEmptyDraft(), identity: null }),
+      setEvent: (eventId, eventTitle) =>
+        set((state) => ({
+          draft: { ...state.draft, eventId, eventTitle },
+        })),
+
+      reset: () =>
+        set((state) => ({
+          draft: {
+            ...createEmptyDraft(),
+            eventId: state.draft.eventId,
+            eventTitle: state.draft.eventTitle,
+          },
+          identity: null,
+        })),
     }),
     {
       name: EVALUATION_DRAFT_STORAGE_KEY,

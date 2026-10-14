@@ -144,6 +144,7 @@ export async function fileEvaluation(
     s3Bucket: stored.bucket,
     s3Key: stored.key,
     filedAt,
+    eventId: draft.eventId,
   });
 
   return {

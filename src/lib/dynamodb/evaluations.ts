@@ -15,6 +15,12 @@ function detailKeys(evaluationId: string) {
   return { PK: key, SK: key };
 }
 
+/** apex EVENT partition key for a bare (or already-prefixed) event id. */
+function eventPartitionKey(eventId: string): string {
+  const value = eventId.trim();
+  return value.startsWith("EVENT#") ? value : `EVENT#${value}`;
+}
+
 function listSk(filedAt: string, evaluationId: string) {
   return `${filedAt}#${evaluationId}`;
 }
@@ -51,6 +57,7 @@ function recordFromItem(item: Record<string, unknown>): EvaluationRecord | null 
     s3Bucket,
     s3Key,
     filedAt,
+    eventId: typeof item.eventId === "string" ? item.eventId : "",
   };
 }
 
@@ -69,6 +76,7 @@ function toItemAttributes(record: EvaluationRecord) {
     s3Bucket: record.s3Bucket,
     s3Key: record.s3Key,
     filedAt: record.filedAt,
+    eventId: record.eventId,
   };
 }
 
@@ -115,24 +123,39 @@ export const dynamoEvaluationIndex: EvaluationIndex = {
     const attrs = toItemAttributes(record);
     const detail = detailKeys(record.evaluationId);
 
-    await Promise.all([
-      dynamodb.send(
-        new PutCommand({
-          TableName: table,
-          Item: { ...detail, ...attrs },
-        }),
-      ),
-      dynamodb.send(
+    const writes = [
+      new PutCommand({
+        TableName: table,
+        Item: { ...detail, ...attrs },
+      }),
+      new PutCommand({
+        TableName: table,
+        Item: {
+          PK: LIST_PK,
+          SK: listSk(record.filedAt, record.evaluationId),
+          ...attrs,
+        },
+      }),
+    ];
+
+    // Per-event index item so mapua-apex can aggregate this filing under the
+    // shared EVENT#{eventId} partition (post-evaluation Section 3) using
+    // begins_with(SK, "EVALUATION#"). Skipped when the filing has no event.
+    const eventId = record.eventId.trim();
+    if (eventId) {
+      writes.push(
         new PutCommand({
           TableName: table,
           Item: {
-            PK: LIST_PK,
-            SK: listSk(record.filedAt, record.evaluationId),
+            PK: eventPartitionKey(eventId),
+            SK: detail.PK,
             ...attrs,
           },
         }),
-      ),
-    ]);
+      );
+    }
+
+    await Promise.all(writes.map((command) => dynamodb.send(command)));
   },
 
   async list(filters) {

@@ -1,8 +1,9 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   useEffect,
+  useRef,
   useState,
   useSyncExternalStore,
   useTransition,
@@ -52,6 +53,7 @@ function parseErrorPayload(
 
 export function EvaluationForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const hasHydrated = useHasHydrated();
   const [validation, setValidation] = useState<ValidationResult | null>(null);
   const [submitMessage, setSubmitMessage] = useState<string | null>(null);
@@ -63,6 +65,8 @@ export function EvaluationForm() {
   const draft = useEvaluationStore((state) => state.draft);
   const identity = useEvaluationStore((state) => state.identity);
   const reset = useEvaluationStore((state) => state.reset);
+  const setEvent = useEvaluationStore((state) => state.setEvent);
+  const appliedEventRef = useRef(false);
 
   const participatedYes = draft.participated === "yes";
   const answeredRatings = countAnsweredRatings(draft);
@@ -77,6 +81,21 @@ export function EvaluationForm() {
       }
     };
   }, [previewUrl]);
+
+  // Attribute this filing to the apex event passed in the URL (from the officer
+  // dashboard's "Evaluate" link). Applied once, after the persisted draft has
+  // hydrated, so the event context is not clobbered by rehydration.
+  useEffect(() => {
+    if (appliedEventRef.current || !hasHydrated) {
+      return;
+    }
+    const eventId = searchParams.get("eventId");
+    if (!eventId?.trim()) {
+      return;
+    }
+    appliedEventRef.current = true;
+    setEvent(eventId.trim(), searchParams.get("eventTitle")?.trim() ?? "");
+  }, [hasHydrated, searchParams, setEvent]);
 
   if (!hasHydrated) {
     return (
@@ -222,6 +241,13 @@ export function EvaluationForm() {
           </div>
           <p className="text-sm text-stone-500">{progressLabel}</p>
         </div>
+
+        {draft.eventId ? (
+          <div className="rounded-lg border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-900">
+            <span className="font-medium">Evaluating event:</span>{" "}
+            {draft.eventTitle || draft.eventId}
+          </div>
+        ) : null}
 
         <IdentitySection
           errors={{

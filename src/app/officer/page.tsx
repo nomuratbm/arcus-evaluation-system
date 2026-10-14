@@ -50,7 +50,7 @@ export default async function OfficerDashboardPage() {
   try {
     openEvents = await fetchPublishedEvents({
       organizationId: auth.session.organizationId,
-      window: "evaluation",
+      window: "attendance",
     });
   } catch (error) {
     eventsError =

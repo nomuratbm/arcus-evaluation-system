@@ -11,6 +11,8 @@ export type EvaluationRecord = {
   s3Bucket: string;
   s3Key: string;
   filedAt: string;
+  /** apex event id this filing is attributed to ("" when unattributed). */
+  eventId: string;
 };
 
 export type EvaluationListFilters = {

@@ -13,6 +13,9 @@ export type RatingsMap = Partial<Record<CriterionId, RatingValue>>;
 export type DiscoverySources = Record<DiscoverySourceId, boolean>;
 
 export type EvaluationDraft = {
+  /** apex event this filing is attributed to ("" when filed without an event). */
+  eventId: string;
+  eventTitle: string;
   studentId: string;
   department: string;
   participated: YesNo | null;
@@ -34,6 +37,8 @@ function emptyDiscoverySources(): DiscoverySources {
 
 export function createEmptyDraft(): EvaluationDraft {
   return {
+    eventId: "",
+    eventTitle: "",
     studentId: "",
     department: "",
     participated: null,

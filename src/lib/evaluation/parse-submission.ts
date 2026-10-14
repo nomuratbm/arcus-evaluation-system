@@ -52,6 +52,8 @@ export function parseEvaluationSubmission(
 
   const raw = value.draft;
   const draft = createEmptyDraft();
+  draft.eventId = typeof raw.eventId === "string" ? raw.eventId : "";
+  draft.eventTitle = typeof raw.eventTitle === "string" ? raw.eventTitle : "";
   draft.studentId =
     typeof raw.studentId === "string" ? raw.studentId : "";
   draft.department =
