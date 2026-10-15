@@ -14,6 +14,8 @@ import type { StudentIdentity } from "@/lib/student-identity";
 type EvaluationStore = {
   draft: EvaluationDraft;
   identity: StudentIdentity | null;
+  contextKey: string;
+  initialize: (userId: string, eventId: string, eventTitle: string, identity: StudentIdentity) => void;
   setStudentId: (value: string) => void;
   setDepartment: (value: string) => void;
   setIdentity: (identity: StudentIdentity | null) => void;
@@ -29,13 +31,19 @@ type EvaluationStore = {
 };
 
 /** Bumped when student identity lookup was added to the draft. */
-export const EVALUATION_DRAFT_STORAGE_KEY = "evaluationDraft:v3";
+export const EVALUATION_DRAFT_STORAGE_KEY = "evaluationDraft:v4";
 
 export const useEvaluationStore = create<EvaluationStore>()(
   persist(
     (set) => ({
       draft: createEmptyDraft(),
       identity: null,
+      contextKey: "",
+      initialize: (userId, eventId, eventTitle, identity) => set((state) => {
+        const contextKey = JSON.stringify([userId, identity.studentId, eventId]);
+        const draft = state.contextKey === contextKey ? state.draft : createEmptyDraft();
+        return { contextKey, identity, draft: { ...draft, studentId: identity.studentId, eventId, eventTitle } };
+      }),
 
       setStudentId: (value) =>
         set((state) => {
@@ -132,15 +140,15 @@ export const useEvaluationStore = create<EvaluationStore>()(
             ...createEmptyDraft(),
             eventId: state.draft.eventId,
             eventTitle: state.draft.eventTitle,
+            studentId: state.identity?.studentId ?? "",
           },
-          identity: null,
         })),
     }),
     {
       name: EVALUATION_DRAFT_STORAGE_KEY,
       partialize: (state) => ({
         draft: state.draft,
-        identity: state.identity,
+        contextKey: state.contextKey,
       }),
     },
   ),

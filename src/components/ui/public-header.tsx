@@ -30,14 +30,15 @@ export async function PublicHeader() {
               <Button
                 size="sm"
                 variant="outline"
-                render={<Link href="/officer" />}
+                render={<Link href={session.role === "admin" ? "/officer" : "/"} />}
               >
                 <LayoutDashboard />
-                Dashboard
+                {session.role === "admin" ? "Dashboard" : "My events"}
               </Button>
               <Button
                 size="sm"
                 variant="ghost"
+                aria-label="Sign out"
                 render={<a href="/api/auth/logout" />}
               >
                 <LogOut />

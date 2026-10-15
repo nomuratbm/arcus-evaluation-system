@@ -28,7 +28,7 @@ export function EvaluationPdfPreview({
   onConfirm,
 }: EvaluationPdfPreviewProps) {
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={(value) => { if (!isFiling) onOpenChange(value); }}>
       <DialogPopup className="max-w-4xl sm:max-w-4xl">
         <DialogHeader>
           <DialogTitle>Review your evaluation</DialogTitle>
@@ -49,7 +49,8 @@ export function EvaluationPdfPreview({
           )}
         </DialogPanel>
         <DialogFooter>
-          <DialogClose render={<Button type="button" variant="outline" />}>
+          {previewUrl ? <Button variant="outline" render={<a href={previewUrl} download="FM-SA-05-01.pdf" />}>Download PDF</Button> : null}
+          <DialogClose disabled={isFiling} render={<Button type="button" variant="outline" />}>
             Back to form
           </DialogClose>
           <Button

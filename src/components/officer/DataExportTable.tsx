@@ -1,7 +1,7 @@
 "use client";
 
 import { DownloadIcon } from "lucide-react";
-import { useCallback, useEffect, useState, useTransition } from "react";
+import { useCallback, useEffect, useRef, useState, useTransition } from "react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -33,28 +33,34 @@ function formatFiledAt(iso: string): string {
   }
 }
 
-export function DataExportTable() {
+export function DataExportTable({ eventId }: { eventId: string }) {
   const [evaluations, setEvaluations] = useState<EvaluationRecord[]>([]);
   const [studentId, setStudentId] = useState("");
   const [department, setDepartment] = useState("");
   const [activityQuery, setActivityQuery] = useState("");
+  const [filters, setFilters] = useState({ studentId: "", department: "", activityQuery: "" });
+  const requestRef = useRef<AbortController | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, startLoading] = useTransition();
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
 
   const load = useCallback(() => {
+    requestRef.current?.abort();
+    const controller = new AbortController();
+    requestRef.current = controller;
     startLoading(async () => {
       setError(null);
-      const params = new URLSearchParams();
-      if (studentId.trim()) params.set("studentId", studentId.trim());
-      if (department.trim()) params.set("department", department.trim());
-      if (activityQuery.trim()) params.set("activity", activityQuery.trim());
+      const params = new URLSearchParams({ eventId });
+      if (filters.studentId.trim()) params.set("studentId", filters.studentId.trim());
+      if (filters.department.trim()) params.set("department", filters.department.trim());
+      if (filters.activityQuery.trim()) params.set("activity", filters.activityQuery.trim());
 
       try {
         const response = await fetch(
-          `/api/export/evaluations?${params.toString()}`,
+          `/api/export/evaluations?${params.toString()}`, { signal: controller.signal },
         );
         const data: unknown = await response.json().catch(() => null);
+        if (controller.signal.aborted) return;
 
         if (!response.ok) {
           const message =
@@ -78,43 +84,35 @@ export function DataExportTable() {
             : [];
         setEvaluations(rows);
       } catch {
-        setError("Could not reach the server.");
+        if (controller.signal.aborted) return;
+        setError("Could not reach the server. Apply filters to try again.");
         setEvaluations([]);
       }
     });
-  }, [activityQuery, department, studentId]);
+  }, [filters, eventId]);
 
   useEffect(() => {
     load();
+    return () => requestRef.current?.abort();
   }, [load]);
 
-  async function handleDownload(evaluationId: string) {
+  async function handleDownload(record: EvaluationRecord) {
+    if (!record.ratings || !record.discoverySources) return;
+    const evaluationId = record.evaluationId;
     setDownloadingId(evaluationId);
     setError(null);
     try {
-      const response = await fetch(
-        `/api/export/evaluations/${encodeURIComponent(evaluationId)}/pdf`,
-      );
-      if (!response.ok) {
-        const data: unknown = await response.json().catch(() => null);
-        const message =
-          typeof data === "object" &&
-          data &&
-          "error" in data &&
-          typeof data.error === "string"
-            ? data.error
-            : "Download failed";
-        setError(message);
-        return;
-      }
-
-      const blob = await response.blob();
+      const { fillEvaluationPdf } = await import("@/lib/evaluation/fill-pdf");
+      const pdf = await fillEvaluationPdf({ ...record, ratings: record.ratings, discoverySources: record.discoverySources }, record);
+      const blob = new Blob([new Uint8Array(pdf)], { type: "application/pdf" });
       const url = URL.createObjectURL(blob);
       const anchor = document.createElement("a");
       anchor.href = url;
       anchor.download = `${evaluationId}.pdf`;
+      document.body.appendChild(anchor);
       anchor.click();
-      URL.revokeObjectURL(url);
+      anchor.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
     } catch {
       setError("Could not download the PDF.");
     } finally {
@@ -128,7 +126,7 @@ export function DataExportTable() {
         className="grid gap-3 sm:grid-cols-4"
         onSubmit={(event) => {
           event.preventDefault();
-          load();
+          setFilters({ studentId, department, activityQuery });
         }}
       >
         <div className="flex flex-col gap-1.5">
@@ -171,6 +169,8 @@ export function DataExportTable() {
         </p>
       ) : null}
 
+      <p className="text-xs text-muted-foreground">Showing up to 100 matching filings. Older records without stored responses cannot be regenerated as PDFs.</p>
+      {isLoading ? <p role="status" className="text-sm text-muted-foreground">Loading evaluations…</p> : null}
       {evaluations.length === 0 && !isLoading ? (
         <Empty className="rounded-2xl border">
           <EmptyHeader>
@@ -215,10 +215,11 @@ export function DataExportTable() {
                     size="sm"
                     variant="outline"
                     loading={downloadingId === row.evaluationId}
-                    onClick={() => handleDownload(row.evaluationId)}
+                    disabled={!!downloadingId || !row.ratings || !row.discoverySources}
+                    onClick={() => handleDownload(row)}
                   >
                     <DownloadIcon aria-hidden />
-                    Download
+                    {row.ratings && row.discoverySources ? "Download" : "Legacy record"}
                   </Button>
                 </TableCell>
               </TableRow>

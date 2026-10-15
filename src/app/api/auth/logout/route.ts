@@ -1,21 +1,18 @@
-import { cookies } from "next/headers";
-
-import { readEnv } from "@/lib/dynamodb/env";
+import { NextRequest, NextResponse } from "next/server";
+import { getLogoutUrl, revokeRefreshToken } from "@/lib/auth/cognito";
+import { isCognitoConfigured } from "@/lib/auth/config";
+import { clearAuthCookies, REFRESH_COOKIE } from "@/lib/auth/session";
 
 export const dynamic = "force-dynamic";
 
-const SESSION_COOKIE = "arcus_session";
-
-/**
- * GET /api/auth/logout
- * Clears the session cookie and optionally redirects to Cognito's logout endpoint.
- */
-export async function GET(request: Request) {
-  const cookieStore = await cookies();
-  cookieStore.delete(SESSION_COOKIE);
-
-  const origin = new URL(request.url).origin;
-  
-  // Redirect to the home page
-  return Response.redirect(origin, 302);
+export async function GET(request: NextRequest) {
+  const token = request.cookies.get(REFRESH_COOKIE)?.value;
+  if (token) {
+    try { await revokeRefreshToken(token); } catch { console.error("Cognito token revocation failed"); }
+  }
+  const response = NextResponse.redirect(isCognitoConfigured() ? getLogoutUrl() : new URL("/", request.url), 303);
+  clearAuthCookies(response.cookies);
+  return response;
 }
+
+export const POST = GET;

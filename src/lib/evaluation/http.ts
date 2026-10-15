@@ -1,7 +1,6 @@
 import { parseEvaluationSubmission, type EvaluationSubmission } from "@/lib/evaluation/parse-submission";
 import type {
   FileEvaluationResult,
-  PreviewEvaluationResult,
 } from "@/lib/evaluation/filing";
 
 export async function readEvaluationSubmission(request: Request): Promise<
@@ -33,13 +32,13 @@ export async function readEvaluationSubmission(request: Request): Promise<
 }
 
 export function filingErrorResponse(
-  result: Exclude<PreviewEvaluationResult | FileEvaluationResult, { status: "ready" } | { status: "stored" }>,
+  result: Exclude<FileEvaluationResult, { status: "stored" }>,
 ): Response {
   if (result.status === "misconfigured") {
     return Response.json(
       {
         error:
-          "Server configuration error: missing S3 bucket or DynamoDB table",
+          "Evaluation storage is not configured"
       },
       { status: 500 },
     );
@@ -59,15 +58,4 @@ export function filingErrorResponse(
     },
     { status: 400 },
   );
-}
-
-export function filledPdfResponse(pdf: Uint8Array): Response {
-  return new Response(Buffer.from(pdf), {
-    status: 200,
-    headers: {
-      "Content-Type": "application/pdf",
-      "Content-Disposition": 'inline; filename="FM-SA-05-01.pdf"',
-      "Cache-Control": "no-store",
-    },
-  });
 }

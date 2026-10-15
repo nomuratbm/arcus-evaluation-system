@@ -1,11 +1,13 @@
 import Link from "next/link";
+import { requirePageSession } from "@/lib/auth/session";
 
 export const metadata = {
   title: "Evaluation submitted",
   description: "Your student activity evaluation has been filed.",
 };
 
-export default function EvaluationSubmittedPage() {
+export default async function EvaluationSubmittedPage() {
+  await requirePageSession("/forms/submitted");
   return (
     <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col justify-center px-4 py-16 sm:px-6">
       <div className="rounded-xl border border-stone-200 bg-white p-8 text-center shadow-sm sm:p-12">
@@ -26,7 +28,7 @@ export default function EvaluationSubmittedPage() {
             Back to home
           </Link>
           <Link
-            href="/forms"
+            href="/"
             className="inline-flex h-10 items-center justify-center rounded-md border border-stone-300 bg-white px-5 text-sm font-medium text-stone-800 transition hover:bg-stone-50"
           >
             Submit another

@@ -1,39 +1,124 @@
-import { readEnv } from "@/lib/dynamodb/env";
-import { stubAuthAdapter } from "@/lib/auth/adapters/stub";
-import type { AppSession, AuthAdapter, AuthError } from "@/lib/auth/types";
+import "server-only";
 
-/**
- * Active auth adapter.
- * Uses Cognito when COGNITO_USER_POOL_ID is configured,
- * otherwise falls back to the dev stub.
- */
-function resolveAdapter(): AuthAdapter {
-  const poolId = readEnv("COGNITO_USER_POOL_ID");
-  if (poolId) {
-    // Dynamic import avoids pulling Cognito deps when using the stub
-    const { cognitoAuthAdapter } =
-      require("@/lib/auth/adapters/cognito") as typeof import("@/lib/auth/adapters/cognito");
-    return cognitoAuthAdapter;
-  }
-  return stubAuthAdapter;
+import { CognitoJwtVerifier } from "aws-jwt-verify";
+import { JwtExpiredError } from "aws-jwt-verify/error";
+import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
+import { cache } from "react";
+import { getCognitoConfig, isCognitoConfigured } from "@/lib/auth/config";
+import { refreshAccessToken, type CognitoTokenSet } from "@/lib/auth/cognito";
+import { isOfficer } from "@/lib/auth/roles";
+import { getDevSession } from "@/lib/auth/adapters/stub";
+import type { AppSession, AuthError } from "@/lib/auth/types";
+import { ACCESS_COOKIE, REFRESH_COOKIE, OAUTH_STATE_COOKIE, OAUTH_NONCE_COOKIE, OAUTH_VERIFIER_COOKIE, OAUTH_NEXT_COOKIE } from "@/lib/auth/cookie-names";
+export { ACCESS_COOKIE, REFRESH_COOKIE, OAUTH_STATE_COOKIE, OAUTH_NONCE_COOKIE, OAUTH_VERIFIER_COOKIE, OAUTH_NEXT_COOKIE } from "@/lib/auth/cookie-names";
+
+type CookieWriter = Pick<Awaited<ReturnType<typeof cookies>>, "set" | "delete">;
+const oauthCookies = [OAUTH_STATE_COOKIE, OAUTH_NONCE_COOKIE, OAUTH_VERIFIER_COOKIE, OAUTH_NEXT_COOKIE];
+const options = (maxAge: number) => ({ httpOnly: true, secure: process.env.NODE_ENV === "production", sameSite: "lax" as const, path: "/", maxAge });
+let accessVerifier: ReturnType<typeof CognitoJwtVerifier.create> | undefined;
+let idVerifier: ReturnType<typeof CognitoJwtVerifier.create> | undefined;
+
+export type AccessVerification =
+  | { status: "ok"; session: AppSession }
+  | { status: "expired" | "invalid" | "missing" };
+
+export function applyTokenCookies(store: CookieWriter, tokens: CognitoTokenSet) {
+  store.set(ACCESS_COOKIE, tokens.accessToken, options(60 * 60 * 24 * 30));
+  if (tokens.refreshToken) store.set(REFRESH_COOKIE, tokens.refreshToken, options(60 * 60 * 24 * 30));
+  store.delete("arcus_session");
 }
 
-let _adapter: AuthAdapter | null = null;
-function getAdapter(): AuthAdapter {
-  if (!_adapter) {
-    _adapter = resolveAdapter();
-  }
-  return _adapter;
+export function clearOauthCookies(store: CookieWriter) {
+  oauthCookies.forEach((name) => store.delete(name));
 }
 
-export async function getSession(): Promise<AppSession | null> {
-  return getAdapter().getSession();
+export function clearAuthCookies(store: CookieWriter) {
+  [ACCESS_COOKIE, REFRESH_COOKIE, "arcus_session"].forEach((name) => store.delete(name));
+  clearOauthCookies(store);
+}
+
+export function applyOauthCookies(store: CookieWriter, values: { nextPath: string; nonce: string; state: string; verifier: string }) {
+  store.set(OAUTH_NEXT_COOKIE, values.nextPath, options(600));
+  store.set(OAUTH_NONCE_COOKIE, values.nonce, options(600));
+  store.set(OAUTH_STATE_COOKIE, values.state, options(600));
+  store.set(OAUTH_VERIFIER_COOKIE, values.verifier, options(600));
+}
+
+export async function verifyAccessToken(token: string | undefined): Promise<AccessVerification> {
+  if (!token) return { status: "missing" };
+  try {
+    const config = getCognitoConfig();
+    accessVerifier ??= CognitoJwtVerifier.create({ userPoolId: config.userPoolId, clientId: config.clientId, tokenUse: "access" });
+    const payload = await accessVerifier.verify(token);
+    const claim = (name: string) => typeof payload[name] === "string" ? (payload[name] as string).trim() || undefined : undefined;
+    const groups = Array.isArray(payload["cognito:groups"]) ? payload["cognito:groups"].filter((group): group is string => typeof group === "string") : [];
+    const organizationId = claim("custom:organization_id");
+    return { status: "ok", session: {
+      userId: payload.sub,
+      displayName: claim("username") ?? payload.sub,
+      organizationId,
+      studentId: claim("custom:student_id"),
+      role: isOfficer({ organizationId, groups }, [config.adminGroup, config.superAdminGroup]) ? "admin" : "student",
+    } };
+  } catch (error) {
+    return { status: error instanceof JwtExpiredError ? "expired" : "invalid" };
+  }
+}
+
+export async function verifyIdToken(token: string, nonce?: string) {
+  const config = getCognitoConfig();
+  idVerifier ??= CognitoJwtVerifier.create({ userPoolId: config.userPoolId, clientId: config.clientId, tokenUse: "id" });
+  return idVerifier.verify(token, { customJwtCheck: ({ payload }) => {
+    if (nonce !== undefined && payload.nonce !== nonce) throw new Error("ID token nonce mismatch");
+  } });
+}
+
+export async function verifyAccessCookie(): Promise<AccessVerification> {
+  if (!isCognitoConfigured()) {
+    const session = getDevSession();
+    return session ? { status: "ok", session } : { status: "missing" };
+  }
+  return verifyAccessToken((await cookies()).get(ACCESS_COOKIE)?.value);
+}
+
+// Server components only read cookies; refresh writes happen in route handlers.
+export const getSession = cache(async (): Promise<AppSession | null> => {
+  const verified = await verifyAccessCookie();
+  return verified.status === "ok" ? verified.session : null;
+});
+
+export async function requirePageSession(returnPath: string, officerOnly = false): Promise<AppSession> {
+  const session = await getSession();
+  if (session) {
+    if (officerOnly && session.role !== "admin") redirect("/forbidden");
+    return session;
+  }
+  const jar = await cookies();
+  const route = jar.get(REFRESH_COOKIE)?.value ? "refresh" : "login";
+  redirect(`/api/auth/${route}?next=${encodeURIComponent(returnPath)}`);
 }
 
 export async function requireSession(): Promise<
   { ok: true; session: AppSession } | { ok: false; error: AuthError }
 > {
-  const session = await getSession();
+  let session = await getSession();
+  if (!session && isCognitoConfigured()) {
+    const jar = await cookies();
+    const refreshToken = jar.get(REFRESH_COOKIE)?.value;
+    if (refreshToken) {
+      try {
+        const tokens = await refreshAccessToken(refreshToken);
+        const verified = await verifyAccessToken(tokens.accessToken);
+        if (verified.status === "ok") {
+          applyTokenCookies(jar, tokens);
+          session = verified.session;
+        }
+      } catch {
+        // An API returns 401; page guards use the refresh route instead.
+      }
+    }
+  }
   if (!session) {
     return { ok: false, error: { status: "unauthenticated" } };
   }
@@ -63,5 +148,5 @@ export function authErrorResponse(error: AuthError): Response {
   if (error.status === "unauthenticated") {
     return Response.json({ error: "Authentication required" }, { status: 401 });
   }
-  return Response.json({ error: "Admin access required" }, { status: 403 });
+  return Response.json({ error: "Officer access required" }, { status: 403 });
 }

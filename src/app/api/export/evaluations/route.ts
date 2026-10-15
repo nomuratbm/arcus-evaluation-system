@@ -1,4 +1,5 @@
 import { authErrorResponse, requireAdmin } from "@/lib/auth/session";
+import { fetchPublishedEvents } from "@/lib/apex/client";
 import { listFiledEvaluations } from "@/lib/evaluation/catalog";
 
 export const dynamic = "force-dynamic";
@@ -10,12 +11,17 @@ export async function GET(request: Request) {
   }
 
   const url = new URL(request.url);
+  const eventId = url.searchParams.get("eventId")?.trim();
+  if (!eventId) return Response.json({ error: "Select an event." }, { status: 400 });
   const studentId = url.searchParams.get("studentId") ?? undefined;
   const department = url.searchParams.get("department") ?? undefined;
   const activityQuery = url.searchParams.get("activity") ?? undefined;
 
   try {
+    const events = await fetchPublishedEvents({ organizationId: auth.session.organizationId, window: "evaluation" });
+    if (!events.some((event) => event.event_id === eventId)) return Response.json({ error: "This event is not available to your account." }, { status: 403 });
     const result = await listFiledEvaluations({
+      eventId,
       studentId,
       department,
       activityQuery,
@@ -29,7 +35,7 @@ export async function GET(request: Request) {
       );
     }
 
-    return Response.json({ evaluations: result.evaluations });
+    return Response.json({ evaluations: result.evaluations }, { headers: { "Cache-Control": "no-store" } });
   } catch (error) {
     console.error("Error listing evaluations:", error);
     return Response.json(

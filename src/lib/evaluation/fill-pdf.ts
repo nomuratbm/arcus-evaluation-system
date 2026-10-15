@@ -1,6 +1,3 @@
-import { readFile } from "node:fs/promises";
-import { join } from "node:path";
-
 import { PDFDocument, type PDFCheckBox, type PDFForm } from "pdf-lib";
 
 import type { CriterionId, RatingValue } from "@/lib/evaluation/criteria";
@@ -201,9 +198,11 @@ const RATING_CHECKBOX_ROWS: Record<
   ],
 };
 
-const templateBytesPromise = readFile(
-  join(process.cwd(), "public/templates/evaluation-template.pdf"),
-);
+async function loadTemplate(): Promise<ArrayBuffer> {
+  const response = await fetch("/templates/evaluation-template.pdf");
+  if (!response.ok) throw new Error("The evaluation PDF template could not be loaded.");
+  return response.arrayBuffer();
+}
 
 function toPdfText(value: string): string {
   return value
@@ -256,7 +255,7 @@ export async function fillEvaluationPdf(
   draft: EvaluationDraft,
   identity: StudentIdentity,
 ): Promise<Uint8Array> {
-  const pdf = await PDFDocument.load(await templateBytesPromise);
+  const pdf = await PDFDocument.load(await loadTemplate());
   const form = pdf.getForm();
 
   setText(form, TEXT_FIELDS.name, identity.fullName);

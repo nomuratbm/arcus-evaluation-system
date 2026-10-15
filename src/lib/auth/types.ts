@@ -1,4 +1,9 @@
-export type AppRole = "admin";
+/**
+ * "admin" is the officer tier (an organization account or a member of an
+ * officer group) that reaches /officer and /export; "student" is any other
+ * authenticated user, who lands on / to file their own evaluation.
+ */
+export type AppRole = "admin" | "student";
 
 export type AppSession = {
   userId: string;
@@ -7,18 +12,16 @@ export type AppSession = {
   email?: string;
   /**
    * mapua-apex organization scope from the Cognito `custom:organization_id`
-   * claim. Present for org_submitters; absent for admins (who may act across
-   * every org). Used to scope server-to-server calls to the backend.
+   * claim. Present for org officers; absent for admins acting across every org
+   * and for students. Used to scope server-to-server calls to the backend.
    */
   organizationId?: string;
-};
-
-/**
- * Auth adapter at the session seam.
- * Cognito replaces the stub without changing callers.
- */
-export type AuthAdapter = {
-  getSession(): Promise<AppSession | null>;
+  /**
+   * The student's number from the Cognito `custom:student_id` claim. Present
+   * for students who registered through arcus-attendance; used to identify
+   * which evaluations they may file and which events they attended.
+   */
+  studentId?: string;
 };
 
 export type AuthError =

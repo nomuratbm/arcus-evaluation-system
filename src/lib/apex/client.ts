@@ -1,3 +1,5 @@
+import "server-only";
+
 import { readEnv } from "@/lib/dynamodb/env";
 
 export type ApexEventWindow = "attendance" | "evaluation";
@@ -68,12 +70,46 @@ export async function fetchPublishedEvents(
   const response = await fetch(url, {
     headers: authHeaders(options.organizationId),
     cache: "no-store",
+    signal: AbortSignal.timeout(15_000),
   });
   if (!response.ok) {
-    const body = await response.text().catch(() => "");
-    throw new Error(`Apex events request failed (${response.status}): ${body}`);
+    throw new Error(`Apex events request failed (${response.status})`);
   }
 
   const payload = (await response.json()) as { data?: ApexPublishedEvent[] };
   return Array.isArray(payload.data) ? payload.data : [];
+}
+
+export type ApexEventPostEval = {
+  event_id: string;
+  submission_id: string;
+  organization_id: string | null;
+  attendance_count: number;
+  evaluation_count: number;
+  attendance: { student_id: string; full_name: string }[];
+  evaluations: { evaluation_id: string; student_id: string; full_name: string; participated: boolean; filed_at: string | null }[];
+  post_eval: {
+    posteval_id: string | null;
+    status: string;
+    submitted_at: string | null;
+    approved_at: string | null;
+    denied_at: string | null;
+  };
+};
+
+export async function fetchStudentEvents(studentId: string): Promise<ApexPublishedEvent[]> {
+  const response = await fetch(`${apiBaseUrl()}/arcus/students/${encodeURIComponent(studentId)}/events?window=evaluation`, {
+    headers: authHeaders(), cache: "no-store", signal: AbortSignal.timeout(15_000),
+  });
+  if (!response.ok) throw new Error(`Apex student events request failed (${response.status})`);
+  const payload = await response.json() as { data?: ApexPublishedEvent[] };
+  return Array.isArray(payload.data) ? payload.data : [];
+}
+
+export async function fetchEventPostEval(eventId: string, organizationId?: string): Promise<ApexEventPostEval> {
+  const response = await fetch(`${apiBaseUrl()}/arcus/events/${encodeURIComponent(eventId)}/post-eval`, {
+    headers: authHeaders(organizationId), cache: "no-store", signal: AbortSignal.timeout(15_000),
+  });
+  if (!response.ok) throw new Error(`Apex post-evaluation request failed (${response.status})`);
+  return await response.json() as ApexEventPostEval;
 }

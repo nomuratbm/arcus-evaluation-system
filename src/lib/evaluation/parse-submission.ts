@@ -10,14 +10,9 @@ import {
   type EvaluationDraft,
   type YesNo,
 } from "@/lib/evaluation/schema";
-import {
-  studentIdentityFromUnknown,
-  type StudentIdentity,
-} from "@/lib/student-identity";
 
 export type EvaluationSubmission = {
   draft: EvaluationDraft;
-  identity: StudentIdentity;
 };
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -38,11 +33,6 @@ export function parseEvaluationSubmission(
   value: unknown,
 ): EvaluationSubmission | null {
   if (!isRecord(value)) {
-    return null;
-  }
-
-  const identity = studentIdentityFromUnknown(value.identity);
-  if (!identity) {
     return null;
   }
 
@@ -84,5 +74,5 @@ export function parseEvaluationSubmission(
     }
   }
 
-  return { draft, identity };
+  return { draft };
 }

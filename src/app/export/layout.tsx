@@ -1,22 +1,14 @@
 import Link from "next/link";
-import { redirect } from "next/navigation";
 import type { ReactNode } from "react";
 
-import { requireAdmin } from "@/lib/auth/session";
+import { requirePageSession } from "@/lib/auth/session";
 
 export default async function ExportLayout({
   children,
 }: {
   children: ReactNode;
 }) {
-  const auth = await requireAdmin();
-  if (!auth.ok) {
-    redirect(
-      auth.error.status === "unauthenticated"
-        ? "/api/auth/login"
-        : "/?auth=forbidden",
-    );
-  }
+  const session = await requirePageSession("/export", true);
 
   return (
     <div className="flex min-h-full flex-1 flex-col">
@@ -27,7 +19,7 @@ export default async function ExportLayout({
               Officer
             </p>
             <p className="text-sm font-medium text-foreground">
-              {auth.session.displayName}
+              {session.displayName}
             </p>
           </div>
           <nav className="flex flex-wrap items-center gap-2 text-sm">

@@ -1,9 +1,8 @@
 "use client";
 
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import {
   useEffect,
-  useRef,
   useState,
   useSyncExternalStore,
   useTransition,
@@ -22,6 +21,7 @@ import {
   validateEvaluationDraft,
   type ValidationResult,
 } from "@/lib/evaluation/validate";
+import type { StudentIdentity } from "@/lib/student-identity";
 import { useEvaluationStore } from "@/store/useEvaluationStore";
 
 function useHasHydrated() {
@@ -51,9 +51,10 @@ function parseErrorPayload(
   return { message, errors };
 }
 
-export function EvaluationForm() {
+export function EvaluationForm({ userId, eventId, eventTitle, student }: {
+  userId: string; eventId: string; eventTitle: string; student: StudentIdentity;
+}) {
   const router = useRouter();
-  const searchParams = useSearchParams();
   const hasHydrated = useHasHydrated();
   const [validation, setValidation] = useState<ValidationResult | null>(null);
   const [submitMessage, setSubmitMessage] = useState<string | null>(null);
@@ -65,8 +66,8 @@ export function EvaluationForm() {
   const draft = useEvaluationStore((state) => state.draft);
   const identity = useEvaluationStore((state) => state.identity);
   const reset = useEvaluationStore((state) => state.reset);
-  const setEvent = useEvaluationStore((state) => state.setEvent);
-  const appliedEventRef = useRef(false);
+  const initialize = useEvaluationStore((state) => state.initialize);
+  const contextKey = useEvaluationStore((state) => state.contextKey);
 
   const participatedYes = draft.participated === "yes";
   const answeredRatings = countAnsweredRatings(draft);
@@ -86,18 +87,11 @@ export function EvaluationForm() {
   // dashboard's "Evaluate" link). Applied once, after the persisted draft has
   // hydrated, so the event context is not clobbered by rehydration.
   useEffect(() => {
-    if (appliedEventRef.current || !hasHydrated) {
-      return;
-    }
-    const eventId = searchParams.get("eventId");
-    if (!eventId?.trim()) {
-      return;
-    }
-    appliedEventRef.current = true;
-    setEvent(eventId.trim(), searchParams.get("eventTitle")?.trim() ?? "");
-  }, [hasHydrated, searchParams, setEvent]);
+    if (!hasHydrated) return;
+    initialize(userId, eventId, eventTitle, student);
+  }, [hasHydrated, userId, eventId, eventTitle, student, initialize]);
 
-  if (!hasHydrated) {
+  if (!hasHydrated || !identity || contextKey !== JSON.stringify([userId, student.studentId, eventId])) {
     return (
       <div
         className="rounded-lg border border-stone-200 bg-white p-8 text-sm text-stone-500"
@@ -122,30 +116,9 @@ export function EvaluationForm() {
       }
 
       try {
-        const response = await fetch("/api/evaluations/preview", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ draft, identity }),
-        });
-
-        if (!response.ok) {
-          const data: unknown = await response.json().catch(() => null);
-          const payload = parseErrorPayload(
-            data,
-            "Failed to preview the evaluation PDF",
-          );
-          if (payload.errors) {
-            setValidation({
-              ok: false,
-              errors: payload.errors,
-              missingRatingCount: result.missingRatingCount,
-            });
-          }
-          setSubmitMessage(payload.message);
-          return;
-        }
-
-        const blob = await response.blob();
+        const { fillEvaluationPdf } = await import("@/lib/evaluation/fill-pdf");
+        const pdf = await fillEvaluationPdf(draft, identity);
+        const blob = new Blob([new Uint8Array(pdf)], { type: "application/pdf" });
         setPreviewUrl(URL.createObjectURL(blob));
         setPreviewOpen(true);
       } catch {
@@ -171,14 +144,14 @@ export function EvaluationForm() {
         const response = await fetch("/api/evaluations", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ draft, identity }),
+          body: JSON.stringify({ draft }),
         });
         const data: unknown = await response.json().catch(() => null);
 
         if (!response.ok) {
           const payload = parseErrorPayload(
             data,
-            "Failed to store the evaluation PDF",
+            "Failed to file the evaluation"
           );
           if (payload.errors) {
             setValidation({
@@ -293,6 +266,7 @@ export function EvaluationForm() {
             <button
               type="button"
               onClick={handleReset}
+              disabled={isBusy}
               className="h-10 rounded-md border border-stone-300 bg-white px-4 text-sm font-medium text-stone-800 transition hover:bg-stone-50"
             >
               Reset

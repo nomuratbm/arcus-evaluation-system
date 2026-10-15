@@ -1,48 +1,15 @@
-import { NextResponse } from "next/server";
-import type { NextRequest } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
+import { ACCESS_COOKIE, REFRESH_COOKIE } from "@/lib/auth/cookie-names";
 
-/**
- * Proxy — the Next.js 16 replacement for middleware.
- *
- * Protects /officer/* and /export/* routes by checking for
- * the session cookie. This is the first line of defense;
- * layout-level guards provide defense-in-depth.
- *
- * Note: We only do an optimistic cookie-presence check here.
- * Full JWT verification happens in the auth adapter (server-side).
- */
 export function proxy(request: NextRequest) {
-  const { pathname } = request.nextUrl;
-
-  // Only protect admin routes
-  const isAdminRoute =
-    pathname.startsWith("/officer") || pathname.startsWith("/export");
-
-  if (!isAdminRoute) {
-    return NextResponse.next();
-  }
-
-  // Check for session cookie (optimistic — not verifying JWT here)
-  const sessionCookie = request.cookies.get("arcus_session");
-
-  if (!sessionCookie?.value) {
-    // No session → redirect to login
-    const loginUrl = new URL("/api/auth/login", request.url);
-    return NextResponse.redirect(loginUrl);
-  }
-
-  return NextResponse.next();
+  const devStub = process.env.NODE_ENV !== "production" && !process.env.COGNITO_USER_POOL_ID?.trim();
+  if (devStub || request.cookies.get(ACCESS_COOKIE)?.value || request.cookies.get(REFRESH_COOKIE)?.value) return NextResponse.next();
+  if (request.nextUrl.pathname.startsWith("/api/")) return NextResponse.json({ error: "Authentication required" }, { status: 401 });
+  const login = new URL("/api/auth/login", request.url);
+  login.searchParams.set("next", request.nextUrl.pathname + request.nextUrl.search);
+  return NextResponse.redirect(login);
 }
 
 export const config = {
-  matcher: [
-    /*
-     * Match admin routes only:
-     * - /officer and its sub-routes
-     * - /export and its sub-routes
-     * Exclude static files, images, and API routes (APIs have their own guards).
-     */
-    "/officer/:path*",
-    "/export/:path*",
-  ],
+  matcher: ["/", "/((?!api/auth|forbidden|_next/static|_next/image|templates/|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)"],
 };

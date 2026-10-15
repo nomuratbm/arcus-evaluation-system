@@ -1,11 +1,15 @@
+import { authErrorResponse, requireSession } from "@/lib/auth/session";
 import { hasDynamoTableConfig } from "@/lib/dynamodb/client";
 import { parseStudentNumber } from "@/lib/student-identity";
 import { lookupStudent } from "@/lib/student-lookup";
 
 export const dynamic = "force-dynamic";
 
-export async function GET(request: Request) {
-  const studentId = new URL(request.url).searchParams.get("student_id");
+export async function GET() {
+  const auth = await requireSession();
+  if (!auth.ok) return authErrorResponse(auth.error);
+  const studentId = auth.session.studentId;
+  if (!studentId) return Response.json({ error: "Your account has no linked student number." }, { status: 403 });
   const parsed = parseStudentNumber(studentId ?? "");
 
   if (!parsed) {
