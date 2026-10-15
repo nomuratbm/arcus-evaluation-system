@@ -33,7 +33,7 @@ export function CommentsSection({ error }: CommentsSectionProps) {
         placeholder="Optional feedback for the Office of Student Affairs"
         aria-invalid={error ? true : undefined}
         aria-describedby={error ? "eval-comments-error" : undefined}
-        className="resize-y rounded-md border border-stone-300 bg-white px-3 py-2 text-sm text-stone-900 outline-none transition focus:border-sky-700 focus:ring-2 focus:ring-sky-700/20"
+        className="resize-y rounded-md border border-stone-300 bg-white px-3 py-2 text-sm text-stone-900 outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
       />
       {error ? (
         <p id="eval-comments-error" className="text-xs text-red-700">

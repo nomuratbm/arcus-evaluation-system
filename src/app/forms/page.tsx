@@ -35,7 +35,7 @@ export default async function FormsPage({ searchParams }: {
     }
   }
   return <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-8 sm:px-6 sm:py-12">
-    <Link href="/" className="mb-5 inline-block text-sm text-sky-900 underline underline-offset-4">Back to events</Link>
+    <Link href="/" className="mb-5 inline-block text-sm text-primary underline underline-offset-4">Back to events</Link>
     <div className="rounded-xl border border-stone-200 bg-white p-5 shadow-sm sm:p-8">{student ? <EvaluationForm key={`${session.userId}:${eventId}`} userId={session.userId} eventId={eventId} eventTitle={eventTitle} student={student} /> : <p role="status">{message}</p>}</div>
   </main>;
 }

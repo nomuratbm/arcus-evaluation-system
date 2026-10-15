@@ -48,7 +48,7 @@ export function ParticipationSection({ errors }: ParticipationSectionProps) {
               value="yes"
               checked={participated === "yes"}
               onChange={() => setParticipated("yes")}
-              className="size-4 accent-sky-800"
+              className="size-4 accent-primary"
             />
             Yes
           </label>
@@ -59,7 +59,7 @@ export function ParticipationSection({ errors }: ParticipationSectionProps) {
               value="no"
               checked={participated === "no"}
               onChange={() => setParticipated("no")}
-              className="size-4 accent-sky-800"
+              className="size-4 accent-primary"
             />
             No
           </label>

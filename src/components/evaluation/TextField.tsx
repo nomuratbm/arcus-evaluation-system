@@ -47,7 +47,7 @@ export function TextField({
         onChange={(event) => onChange(event.target.value)}
         aria-invalid={error ? true : undefined}
         aria-describedby={error ? `${id}-error` : undefined}
-        className="h-10 rounded-md border border-stone-300 bg-white px-3 text-sm text-stone-900 outline-none transition focus:border-sky-700 focus:ring-2 focus:ring-sky-700/20"
+        className="h-10 rounded-md border border-stone-300 bg-white px-3 text-sm text-stone-900 outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
       />
       {error ? (
         <p id={`${id}-error`} className="text-xs text-red-700">

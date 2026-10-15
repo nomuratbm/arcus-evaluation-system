@@ -80,14 +80,15 @@ async function getMember(studentId: string): Promise<MemberRecord | null> {
   return null;
 }
 
-async function getOrganizationName(organizationId: string): Promise<string> {
+export async function getOrganizationName(organizationId: string): Promise<string> {
   const key = organizationItemKey(organizationId);
   const item = await getItemByKey(key);
   if (!item) {
     return "";
   }
 
-  return typeof item.org_name === "string" ? item.org_name.trim() : "";
+  const name = typeof item.name === "string" ? item.name : "";
+  return name.trim();
 }
 
 function toStudentIdentity(member: MemberRecord, organizationName: string): StudentIdentity {

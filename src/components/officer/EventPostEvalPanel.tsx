@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import type { ApexEventPostEval } from "@/lib/apex/client";
 
@@ -32,7 +33,7 @@ export function EventPostEvalPanel({ eventId }: { eventId: string }) {
       <h2 className="text-lg font-semibold">Event post-evaluation</h2>
       <Button type="button" variant="outline" size="sm" onClick={() => setRevision((value) => value + 1)}>Refresh status</Button>
     </div>
-    {error ? <p role="alert" className="text-sm text-destructive">{error} Use Refresh status to retry.</p> : !data ? <p role="status" className="text-sm text-muted-foreground">Loading attendance and post-evaluation…</p> : <>
+    {error ? <p role="alert" className="text-sm text-destructive">{error} Use Refresh status to retry.</p> : !data ? <div aria-label="Loading attendance and post-evaluation" className="space-y-3" role="status"><Skeleton className="h-4 w-72 max-w-full" /><Skeleton className="h-28 w-full" /><Skeleton className="h-10 w-full" /><Skeleton className="h-10 w-full" /><Skeleton className="h-10 w-full" /></div> : <>
       <p className="text-sm">{data.attendance_count} attendance records · {data.evaluation_count} participant evaluations</p>
       <div className="rounded-lg border bg-card p-4">
         <h3 className="font-medium">Apex review: {data.post_eval.status === "none" ? "Not submitted" : data.post_eval.status}</h3>

@@ -7,6 +7,11 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-page: #F5F6F8;
+  --color-maroon: #8B0000;
+  --color-maroon-hover: #6B0000;
+  --color-gold: #FBC02D;
+  --color-gold-foreground: #5C4300;
   --font-sans: var(--font-sans);
   --font-mono: var(--font-mono);
   --animate-skeleton: skeleton 2s -1s infinite linear;
@@ -153,7 +158,7 @@
   --card-foreground: var(--color-neutral-800);
   --popover: var(--color-white);
   --popover-foreground: var(--color-neutral-800);
-  --primary: var(--color-neutral-800);
+  --primary: #8B0000;
   --primary-foreground: var(--color-neutral-50);
   --secondary: --alpha(var(--color-black) / 4%);
   --secondary-foreground: var(--color-neutral-800);
@@ -164,7 +169,7 @@
   --destructive: var(--color-red-500);
   --border: --alpha(var(--color-black) / 8%);
   --input: --alpha(var(--color-black) / 10%);
-  --ring: var(--color-neutral-400);
+  --ring: color-mix(in srgb, #8B0000 55%, white);
   --chart-1: var(--color-orange-600);
   --chart-2: var(--color-teal-600);
   --chart-3: var(--color-cyan-900);
@@ -240,6 +245,16 @@
   }
   html {
     @apply font-sans font-sans font-mono;
+    color-scheme: only light;
+  }
+
+  ::selection {
+    background: #8B0000;
+    color: #fff8e7;
+  }
+
+  :focus-visible {
+    outline-color: #8B0000;
   }
 }
 

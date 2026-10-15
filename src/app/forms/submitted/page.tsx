@@ -23,7 +23,7 @@ export default async function EvaluationSubmittedPage() {
         <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
           <Link
             href="/"
-            className="inline-flex h-10 items-center justify-center rounded-md bg-sky-900 px-5 text-sm font-medium text-white transition hover:bg-sky-800"
+            className="inline-flex h-10 items-center justify-center rounded-md bg-primary px-5 text-sm font-medium text-primary-foreground transition hover:bg-maroon-hover"
           >
             Back to home
           </Link>

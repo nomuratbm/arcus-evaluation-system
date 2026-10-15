@@ -10,6 +10,7 @@ import {
 } from "react";
 
 import { CommentsSection } from "@/components/evaluation/CommentsSection";
+import { Skeleton } from "@/components/ui/skeleton";
 import { DiscoverySection } from "@/components/evaluation/DiscoverySection";
 import { EvaluationPdfPreview } from "@/components/evaluation/EvaluationPdfPreview";
 import { IdentitySection } from "@/components/evaluation/IdentitySection";
@@ -94,10 +95,17 @@ export function EvaluationForm({ userId, eventId, eventTitle, student }: {
   if (!hasHydrated || !identity || contextKey !== JSON.stringify([userId, student.studentId, eventId])) {
     return (
       <div
-        className="rounded-lg border border-stone-200 bg-white p-8 text-sm text-stone-500"
         aria-busy="true"
+        aria-label="Loading saved draft"
+        className="flex flex-col gap-6"
+        role="status"
       >
-        Loading saved draft…
+        <Skeleton className="h-4 w-24" />
+        <Skeleton className="h-8 w-full max-w-md" />
+        <Skeleton className="h-4 w-full" />
+        <Skeleton className="h-28 w-full" />
+        <Skeleton className="h-28 w-full" />
+        <Skeleton className="h-40 w-full" />
       </div>
     );
   }
@@ -216,7 +224,7 @@ export function EvaluationForm({ userId, eventId, eventTitle, student }: {
         </div>
 
         {draft.eventId ? (
-          <div className="rounded-lg border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-900">
+          <div className="rounded-lg border border-info/30 bg-info/10 px-4 py-3 text-sm text-info-foreground">
             <span className="font-medium">Evaluating event:</span>{" "}
             {draft.eventTitle || draft.eventId}
           </div>
@@ -274,7 +282,7 @@ export function EvaluationForm({ userId, eventId, eventTitle, student }: {
             <button
               type="submit"
               disabled={isBusy}
-              className="h-10 rounded-md bg-sky-900 px-5 text-sm font-medium text-white transition hover:bg-sky-800 disabled:cursor-not-allowed disabled:opacity-60"
+              className="h-10 rounded-md bg-primary px-5 text-sm font-medium text-primary-foreground transition hover:bg-maroon-hover disabled:cursor-not-allowed disabled:opacity-60"
             >
               {isPreviewPending ? "Preparing preview…" : "Review PDF"}
             </button>

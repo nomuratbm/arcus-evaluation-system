@@ -4,6 +4,13 @@ import { listFiledEvaluations } from "@/lib/evaluation/catalog";
 
 export const dynamic = "force-dynamic";
 
+function requestedLimit(value: string | null): number {
+  if (!value) return 200;
+  const parsed = Number(value);
+  if (!Number.isInteger(parsed)) return 200;
+  return Math.min(Math.max(parsed, 1), 200);
+}
+
 export async function GET(request: Request) {
   const auth = await requireAdmin();
   if (!auth.ok) {
@@ -25,7 +32,7 @@ export async function GET(request: Request) {
       studentId,
       department,
       activityQuery,
-      limit: 100,
+      limit: requestedLimit(url.searchParams.get("limit")),
     });
 
     if (result.status === "misconfigured") {

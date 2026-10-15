@@ -1,6 +1,6 @@
 /**
  * "admin" is the officer tier (an organization account or a member of an
- * officer group) that reaches /officer and /export; "student" is any other
+ * officer group) that reaches /officer; "student" is any other
  * authenticated user, who lands on / to file their own evaluation.
  */
 export type AppRole = "admin" | "student";

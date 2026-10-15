@@ -23,10 +23,10 @@ export default async function Home() {
         <ul className="mt-8 divide-y divide-stone-200 rounded-lg border border-stone-200 bg-white">
           {events.map((event) => <li key={event.event_id}>
             <Link href={`/forms?${new URLSearchParams({ eventId: event.event_id, eventTitle: event.title ?? "Untitled event" })}`}
-              className="block rounded-lg p-5 transition-colors hover:bg-stone-50 focus-visible:outline-2 focus-visible:outline-sky-800">
-              <h2 className="font-semibold text-sky-900">{event.title ?? "Untitled event"}</h2>
+              className="block rounded-lg p-5 transition-colors hover:bg-stone-50 focus-visible:outline-2 focus-visible:outline-primary">
+              <h2 className="font-semibold text-stone-950">{event.title ?? "Untitled event"}</h2>
               <p className="mt-1 text-sm text-stone-600">{[event.organization_name, event.date_of_event, event.venue].filter(Boolean).join(" · ")}</p>
-              <p className="mt-2 text-sm text-sky-900">Complete evaluation</p>
+              <p className="mt-2 text-sm text-primary">Complete evaluation</p>
             </Link>
           </li>)}
         </ul>}

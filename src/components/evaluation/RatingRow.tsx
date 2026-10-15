@@ -71,7 +71,7 @@ function RatingOption({
       htmlFor={inputId}
       className={`flex cursor-pointer flex-col items-center gap-1 rounded-md border px-1 py-2 text-center transition ${
         checked
-          ? "border-sky-800 bg-sky-50 text-sky-950"
+          ? "border-primary bg-primary/5 text-primary"
           : "border-stone-200 bg-white text-stone-700 hover:border-stone-300"
       }`}
     >

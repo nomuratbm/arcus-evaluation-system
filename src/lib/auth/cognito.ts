@@ -69,7 +69,7 @@ export function safeReturnPath(value: string | null | undefined): string {
 
   const url = new URL(value, "https://arcus.invalid");
   if (url.origin !== "https://arcus.invalid") return "/";
-  if (["/", "/officer", "/export", "/forms", "/forms/submitted"].includes(url.pathname)) {
+  if (["/", "/officer", "/forms", "/forms/submitted"].includes(url.pathname)) {
     return `${url.pathname}${url.search}`;
   }
 

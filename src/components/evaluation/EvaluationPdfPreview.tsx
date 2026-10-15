@@ -11,6 +11,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 
 type EvaluationPdfPreviewProps = {
   open: boolean;
@@ -45,7 +46,11 @@ export function EvaluationPdfPreview({
               className="h-[min(70vh,40rem)] w-full rounded-md border border-stone-200 bg-stone-100"
             />
           ) : (
-            <p className="text-sm text-stone-500">Preparing preview…</p>
+            <Skeleton
+              aria-label="Preparing preview"
+              className="h-[min(70vh,40rem)] w-full"
+              role="status"
+            />
           )}
         </DialogPanel>
         <DialogFooter>
