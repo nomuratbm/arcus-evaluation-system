@@ -42,8 +42,9 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         inter.variable,
         interHeading.variable,
       )}
+      suppressHydrationWarning
     >
-      <body className="flex min-h-full flex-col">
+      <body className="flex min-h-full flex-col bg-background text-foreground">
         <PublicHeader />
         {children}
       </body>

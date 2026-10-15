@@ -17,7 +17,7 @@ export default async function Home() {
   return (
     <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-10 sm:px-6">
       <h1 className="text-3xl font-semibold tracking-tight text-stone-950">Your event evaluations</h1>
-      <p className="mt-3 text-base text-stone-600">Choose an event you attended to complete the FM-SA-05-01 form. Only events with an open evaluation window appear here.</p>
+      <p className="mt-3 text-base text-stone-600">Choose an event you attended to complete the post evaluation form. Only events with an open evaluation window appear here.</p>
       {message ? <p role="status" className="mt-8 rounded-lg border border-stone-200 bg-white p-5 text-sm text-stone-700">{message}</p> : events.length === 0 ?
         <p className="mt-8 rounded-lg border border-stone-200 bg-white p-5 text-sm text-stone-700">No evaluations are available right now. Events appear after your attendance is recorded and while evaluations are open.</p> :
         <ul className="mt-8 divide-y divide-stone-200 rounded-lg border border-stone-200 bg-white">

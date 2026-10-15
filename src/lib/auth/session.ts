@@ -10,8 +10,8 @@ import { refreshAccessToken, type CognitoTokenSet } from "@/lib/auth/cognito";
 import { isOfficer } from "@/lib/auth/roles";
 import { getDevSession } from "@/lib/auth/adapters/stub";
 import type { AppSession, AuthError } from "@/lib/auth/types";
-import { ACCESS_COOKIE, REFRESH_COOKIE, OAUTH_STATE_COOKIE, OAUTH_NONCE_COOKIE, OAUTH_VERIFIER_COOKIE, OAUTH_NEXT_COOKIE } from "@/lib/auth/cookie-names";
-export { ACCESS_COOKIE, REFRESH_COOKIE, OAUTH_STATE_COOKIE, OAUTH_NONCE_COOKIE, OAUTH_VERIFIER_COOKIE, OAUTH_NEXT_COOKIE } from "@/lib/auth/cookie-names";
+import { ACCESS_COOKIE, ID_COOKIE as ID_TOKEN_COOKIE, REFRESH_COOKIE, OAUTH_STATE_COOKIE, OAUTH_NONCE_COOKIE, OAUTH_VERIFIER_COOKIE, OAUTH_NEXT_COOKIE } from "@/lib/auth/cookie-names";
+export { ACCESS_COOKIE, ID_COOKIE, REFRESH_COOKIE, OAUTH_STATE_COOKIE, OAUTH_NONCE_COOKIE, OAUTH_VERIFIER_COOKIE, OAUTH_NEXT_COOKIE } from "@/lib/auth/cookie-names";
 
 type CookieWriter = Pick<Awaited<ReturnType<typeof cookies>>, "set" | "delete">;
 const oauthCookies = [OAUTH_STATE_COOKIE, OAUTH_NONCE_COOKIE, OAUTH_VERIFIER_COOKIE, OAUTH_NEXT_COOKIE];
@@ -25,6 +25,7 @@ export type AccessVerification =
 
 export function applyTokenCookies(store: CookieWriter, tokens: CognitoTokenSet) {
   store.set(ACCESS_COOKIE, tokens.accessToken, options(60 * 60 * 24 * 30));
+  if (tokens.idToken) store.set(ID_TOKEN_COOKIE, tokens.idToken, options(60 * 60 * 24 * 30));
   if (tokens.refreshToken) store.set(REFRESH_COOKIE, tokens.refreshToken, options(60 * 60 * 24 * 30));
   store.delete("arcus_session");
 }
@@ -34,7 +35,7 @@ export function clearOauthCookies(store: CookieWriter) {
 }
 
 export function clearAuthCookies(store: CookieWriter) {
-  [ACCESS_COOKIE, REFRESH_COOKIE, "arcus_session"].forEach((name) => store.delete(name));
+  [ACCESS_COOKIE, ID_TOKEN_COOKIE, REFRESH_COOKIE, "arcus_session"].forEach((name) => store.delete(name));
   clearOauthCookies(store);
 }
 
@@ -74,12 +75,42 @@ export async function verifyIdToken(token: string, nonce?: string) {
   } });
 }
 
+type IdTokenClaims = { organizationId?: string; studentId?: string; sub: string };
+
+/** Custom attributes live on the ID token. Access tokens omit them unless a pre-token trigger copies them. */
+async function readIdTokenClaims(token: string | undefined): Promise<IdTokenClaims | null> {
+  if (!token) return null;
+  try {
+    const payload = await verifyIdToken(token);
+    const claim = (name: string) => typeof payload[name] === "string" ? payload[name].trim() || undefined : undefined;
+    return { organizationId: claim("custom:organization_id"), studentId: claim("custom:student_id"), sub: payload.sub };
+  } catch {
+    return null;
+  }
+}
+
+function withIdTokenClaims(verified: AccessVerification, claims: IdTokenClaims | null): AccessVerification {
+  if (verified.status !== "ok" || !claims || claims.sub !== verified.session.userId) return verified;
+  const organizationId = verified.session.organizationId ?? claims.organizationId;
+  return {
+    status: "ok",
+    session: {
+      ...verified.session,
+      organizationId,
+      studentId: verified.session.studentId ?? claims.studentId,
+      role: organizationId ? "admin" : verified.session.role,
+    },
+  };
+}
+
 export async function verifyAccessCookie(): Promise<AccessVerification> {
   if (!isCognitoConfigured()) {
     const session = getDevSession();
     return session ? { status: "ok", session } : { status: "missing" };
   }
-  return verifyAccessToken((await cookies()).get(ACCESS_COOKIE)?.value);
+  const jar = await cookies();
+  const verified = await verifyAccessToken(jar.get(ACCESS_COOKIE)?.value);
+  return withIdTokenClaims(verified, await readIdTokenClaims(jar.get(ID_TOKEN_COOKIE)?.value));
 }
 
 // Server components only read cookies; refresh writes happen in route handlers.
@@ -109,7 +140,10 @@ export async function requireSession(): Promise<
     if (refreshToken) {
       try {
         const tokens = await refreshAccessToken(refreshToken);
-        const verified = await verifyAccessToken(tokens.accessToken);
+        const verified = withIdTokenClaims(
+          await verifyAccessToken(tokens.accessToken),
+          await readIdTokenClaims(tokens.idToken),
+        );
         if (verified.status === "ok") {
           applyTokenCookies(jar, tokens);
           session = verified.session;

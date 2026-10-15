@@ -5,7 +5,7 @@ import {
   createPkce, exchangeAuthorizationCode, getAuthorizeUrl,
   refreshAccessToken, revokeRefreshToken, safeReturnPath,
 } from "@/lib/auth/cognito";
-import { ACCESS_COOKIE, REFRESH_COOKIE, OAUTH_STATE_COOKIE } from "@/lib/auth/cookie-names";
+import { ACCESS_COOKIE, ID_COOKIE, REFRESH_COOKIE, OAUTH_STATE_COOKIE } from "@/lib/auth/cookie-names";
 
 const configuration = {
   APP_BASE_URL: "http://localhost:3100",
@@ -36,6 +36,7 @@ test("login preserves event query attribution and rejects unsafe return targets"
 
 test("evaluation cookies do not overwrite attendance cookies on the same host", () => {
   assert.notEqual(ACCESS_COOKIE, "cognito_access");
+  assert.notEqual(ID_COOKIE, "cognito_id");
   assert.notEqual(REFRESH_COOKIE, "cognito_refresh");
   assert.notEqual(OAUTH_STATE_COOKIE, "cognito_oauth_state");
 });
