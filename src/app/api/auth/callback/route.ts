@@ -11,11 +11,19 @@ export async function GET(request: NextRequest) {
   const verifier = request.cookies.get(OAUTH_VERIFIER_COOKIE)?.value;
   const nonce = request.cookies.get(OAUTH_NONCE_COOKIE)?.value;
   const next = safeReturnPath(request.cookies.get(OAUTH_NEXT_COOKIE)?.value);
-  if (request.nextUrl.searchParams.has("error") || !code || !state || state !== expected || !verifier || !nonce) {
-    const response = NextResponse.json({ error: "Sign-in could not be completed. Start a new sign-in at /api/auth/login." }, { status: 400 });
+  const home = new URL("/", request.url);
+
+  // A stale Cognito return must not erase the PKCE cookies of a newer sign-in.
+  if (request.nextUrl.searchParams.has("error") || !code || !state || state !== expected) {
+    return NextResponse.redirect(home);
+  }
+
+  if (!verifier || !nonce) {
+    const response = NextResponse.redirect(new URL("/api/auth/login", request.url));
     clearOauthCookies(response.cookies);
     return response;
   }
+
   try {
     const tokens = await exchangeAuthorizationCode(code, verifier);
     if (!tokens.idToken) throw new Error("Missing ID token");
@@ -25,8 +33,9 @@ export async function GET(request: NextRequest) {
     clearOauthCookies(response.cookies);
     applyTokenCookies(response.cookies, tokens);
     return response;
-  } catch {
-    const response = NextResponse.json({ error: "Sign-in failed. Try /api/auth/login again." }, { status: 401 });
+  } catch (error) {
+    console.error("Cognito callback failed:", error);
+    const response = NextResponse.redirect(home);
     clearOauthCookies(response.cookies);
     return response;
   }
