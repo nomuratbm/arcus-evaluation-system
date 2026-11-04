@@ -42,6 +42,9 @@ export function getAuthorizeUrl(input: {
   url.searchParams.set("code_challenge_method", "S256");
   url.searchParams.set("state", input.state);
   url.searchParams.set("nonce", input.nonce);
+  // Without a prompt the hosted UI reuses its session and skips straight to the
+  // callback, so a new sign-in never shows the form for these credentials.
+  url.searchParams.set("prompt", "login");
   return url.toString();
 }
 
