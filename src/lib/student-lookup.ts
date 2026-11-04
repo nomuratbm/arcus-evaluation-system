@@ -14,11 +14,16 @@ type MemberRecord = {
   organizationId: string;
 };
 
+function studentItemKey(studentId: string): string {
+  return studentId.startsWith("STUDENT#") ? studentId : `STUDENT#${studentId}`;
+}
+
 function memberItemKey(studentId: string): string {
   return studentId.startsWith("MEMBER#") ? studentId : `MEMBER#${studentId}`;
 }
 
 function studentIdFromMemberKey(key: string): string {
+  if (key.startsWith("STUDENT#")) return key.slice("STUDENT#".length);
   return key.startsWith("MEMBER#") ? key.slice("MEMBER#".length) : key;
 }
 
@@ -66,15 +71,14 @@ function memberFromRecord(item: Record<string, unknown>): MemberRecord | null {
 }
 
 async function getMember(studentId: string): Promise<MemberRecord | null> {
-  const keyed = memberItemKey(studentId);
-  const keyedItem = await getItemByKey(keyed);
-  if (keyedItem) {
-    return memberFromRecord(keyedItem);
-  }
-
-  if (keyed !== studentId) {
-    const fallbackItem = await getItemByKey(studentId);
-    return fallbackItem ? memberFromRecord(fallbackItem) : null;
+  // Attendance registration writes the STUDENT# profile; the MEMBER# key is a
+  // legacy profile (and also the roster sort key, which has no name fields).
+  for (const key of [studentItemKey(studentId), memberItemKey(studentId)]) {
+    const item = await getItemByKey(key);
+    if (item) {
+      const member = memberFromRecord(item);
+      if (member) return member;
+    }
   }
 
   return null;
