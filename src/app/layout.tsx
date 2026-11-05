@@ -3,6 +3,7 @@ import { Geist, Geist_Mono, Inter } from "next/font/google";
 
 import { cn } from "@/lib/utils/utils";
 import { PublicHeader } from "@/components/ui/public-header";
+import { SiteFooter } from "@/components/ui/site-footer";
 
 import "./globals.css";
 
@@ -44,9 +45,10 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       )}
       suppressHydrationWarning
     >
-      <body className="flex min-h-full flex-col bg-page text-foreground">
+      <body className="flex min-h-full flex-col bg-page pb-12 text-foreground">
         <PublicHeader />
         {children}
+        <SiteFooter />
       </body>
     </html>
   );
